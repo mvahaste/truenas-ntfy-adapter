@@ -16,6 +16,16 @@ GOTIFY_TOKEN = os.environ.get("GOTIFY_TOKEN")
 LISTEN_HOST = os.environ.get("LISTEN_HOST", "127.0.0.1")
 PORT = 31662
 
+# Control whether the validity of the ssl certificate
+# of the gotify server should be checked.
+# Useful for allowing self signed certificates
+#
+# SECURITY: Consider disabling verification of the
+# certificate is highly insecure as it allows for mitm attacks to
+# intercept messages and even the secret Gotify Token
+VERIFY_CERT = not os.environ.get("VERIFY_CERT", "true").lower() in ("false", "no", "n")
+
+
 
 routes = web.RouteTableDef()
 
@@ -61,7 +71,7 @@ async def send_gotify_message(message, token, title=None, priority=None):
         json["priority"] = priority
 
     async with ClientSession() as session:
-        async with session.post(GOTIFY_BASEURL, headers=headers, json=json) as resp:
+        async with session.post(GOTIFY_BASEURL, headers=headers, json=json, ssl=VERIFY_CERT) as resp:
             return resp
 
 if __name__ == "__main__":
@@ -76,6 +86,9 @@ if __name__ == "__main__":
         if not GOTIFY_BASEURL[-1] == "/":
             GOTIFY_BASEURL += "/"
         GOTIFY_BASEURL += "message"
+
+    if not VERIFY_CERT:
+        print("WARNING: Running without certificate validation of the gotify endpoint")
 
     # Listen
     app = web.Application()
